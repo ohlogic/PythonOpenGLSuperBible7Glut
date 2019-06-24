@@ -28,12 +28,12 @@ import time
 import math
 fullscreen = True
 
-sys.path.append("../shared")
+# sys.path.append("../shared")
 
-from math3d import m3dDegToRad, m3dRotationMatrix44, M3DMatrix44f, m3dLoadIdentity44, \
-                                            m3dTranslateMatrix44, m3dScaleMatrix44, \
-                                            m3dMatrixMultiply44, m3dTransposeMatrix44, \
-                                            m3dRadToDeg
+# from math3d import m3dDegToRad, m3dRotationMatrix44, M3DMatrix44f, m3dLoadIdentity44, \
+                                            # m3dTranslateMatrix44, m3dScaleMatrix44, \
+                                            # m3dMatrixMultiply44, m3dTransposeMatrix44, \
+                                            # m3dRadToDeg
 
 import numpy.matlib 
 import numpy as np 
@@ -50,10 +50,24 @@ except:
         ''')
     sys.exit()
 
-
 from math import cos, sin
 from array import array
 
+M3D_PI = 3.14159265358979323846
+M3D_PI_DIV_180 = M3D_PI / 180.0
+M3D_INV_PI_DIV_180 = 57.2957795130823229
+
+# Translate matrix. Only 4x4 matrices supported
+def m3dTranslateMatrix44(m, x, y, z):
+    m[12] += x
+    m[13] += y
+    m[14] += z
+
+def m3dDegToRad(num):
+    return (num * M3D_PI_DIV_180)
+
+def m3dRadToDeg(num):
+    return (num * M3D_INV_PI_DIV_180)
 
 def m3dOrtho(l, r, t, b, n, f):
     return (GLfloat * 16)(
@@ -71,21 +85,58 @@ def m3dPerspective(fov_y, aspect, n, f):
         0,         0,    -(f+n)/(f-n),   -1,
         0,         0,    -2*f*n/(f-n),    0)
 
-def rotation_matrix(axis, theta):
-    """
-    Return the rotation matrix associated with counterclockwise rotation about
-    the given axis by theta radians.
-    """
-    axis = np.asarray(axis)
-    axis = axis / math.sqrt(np.dot(axis, axis))
-    a = math.cos(theta / 2.0)
-    b, c, d = -axis * math.sin(theta / 2.0)
-    aa, bb, cc, dd = a * a, b * b, c * c, d * d
-    bc, ad, ac, ab, bd, cd = b * c, a * d, a * c, a * b, b * d, c * d
-    return np.array([[aa + bb - cc - dd, 2 * (bc + ad), 2 * (bd - ac)],
-                     [2 * (bc - ad), aa + cc - bb - dd, 2 * (cd + ab)],
-                     [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc]])
+# Creates a 4x4 rotation matrix, takes radians NOT degrees
+def m3dRotationMatrix44(m, angle, x, y, z):
+    s = sin(angle)
+    c = cos(angle)
+    mag = float((x * x + y * y + z * z) ** 0.5)
+    
+    if mag == 0.0:
+        m3dLoadIdentity(m)
+        return
+    
+    x /= mag
+    y /= mag
+    z /= mag
+    
+    xx = x * x
+    yy = y * y
+    zz = z * z
+    xy = x * y
+    yz = y * z
+    zx = z * x
+    xs = x * s
+    ys = y * s
+    zs = z * s
+    one_c = 1.0 - c
+    
+    m[0] = (one_c * xx) + c
+    m[1] = (one_c * xy) - zs
+    m[2] = (one_c * zx) + ys
+    m[3] = 0.0
+    
+    m[4] = (one_c * xy) + zs
+    m[5] = (one_c * yy) + c
+    m[6] = (one_c * yz) - xs
+    m[7] = 0.0
+    
+    m[8] = (one_c * zx) - ys
+    m[9] = (one_c * yz) + xs
+    m[10] = (one_c * zz) + c
+    m[11]  = 0.0
+    
+    m[12] = 0.0
+    m[13] = 0.0
+    m[14] = 0.0
+    m[15] = 1.0
 
+def m3dMultiply(A, B):
+    C = (GLfloat * 16)(*identityMatrix)
+    for k in range(0, 4):
+        for j in range(0, 4):
+            C[k*4+j] = A[0*4+j] * B[k*4+0] + A[1*4+j] * B[k*4+1] + \
+                       A[2*4+j] * B[k*4+2] + A[3*4+j] * B[k*4+3]
+    return C
 
 identityMatrix = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]
 
@@ -93,6 +144,7 @@ mv_location = (GLfloat * 16)(*identityMatrix)
 proj_location = (GLfloat * 16)(*identityMatrix)
 proj_matrix = (GLfloat * 16)(*identityMatrix)
 
+many_cubes = False
 
 # Vertex program
 vs_source = '''
@@ -133,8 +185,6 @@ fs_source = '''
 '''
 
 
-
-
 def compile_program(vertex_source, fragment_source):
 
     global mv_location
@@ -153,7 +203,6 @@ def compile_program(vertex_source, fragment_source):
                     raise Exception('failed to compile shader "%s":\n%s' % 
                     ('vertex_shader', glGetShaderInfoLog(vertex_shader)))
 
-
     if fragment_source:
 
         fragment_shader = glCreateShader(GL_FRAGMENT_SHADER)
@@ -163,7 +212,6 @@ def compile_program(vertex_source, fragment_source):
         if not glGetShaderiv(fragment_shader, GL_COMPILE_STATUS):
                     raise Exception('failed to compile shader "%s":\n%s' % 
                     ('fragment_shader', glGetShaderInfoLog(fragment_shader)))
-
 
     program = glCreateProgram()
 
@@ -178,7 +226,6 @@ def compile_program(vertex_source, fragment_source):
     vao = GLuint(0)
     glGenVertexArrays(1, vao);
     glBindVertexArray(vao);
-
 
     vertex_positions = [
         -0.25,  0.25, -0.25,
@@ -233,13 +280,12 @@ def compile_program(vertex_source, fragment_source):
     glGenBuffers(1, buffer);
     glBindBuffer(GL_ARRAY_BUFFER, buffer);
 
-
+    #ar=numpy.array(vertex_positions, dtype='float32')
     ar=array("f",vertex_positions)
     glBufferData(GL_ARRAY_BUFFER, ar.tostring(), GL_STATIC_DRAW)
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, None);
     glEnableVertexAttribArray(0);
-
 
     glEnable(GL_CULL_FACE);
     glFrontFace(GL_CW);
@@ -250,19 +296,19 @@ def compile_program(vertex_source, fragment_source):
     return program
 
 
-
-
-
 class Scene:
 
-    def __init__(self):
-        pass
+    def __init__(self, width, height):
+    
+        self.width = width
+        self.height = height
 
     def display(self):
         global mv_location
         global proj_location
         global proj_matrix
-
+        global many_cubes
+        
         currentTime = time.time()
 
         green = [ 0.0, 0.25, 0.0, 1.0 ]
@@ -278,51 +324,80 @@ class Scene:
 
         #proj_matrix = m3dOrtho(-1, 1, -1, 1, -10, 10)
         #proj_matrix = m3dPerspective(50.0*math.pi/180.0, 512/512, 0.1, 1000.0)
-        glUniformMatrix4fv(proj_location, 1, GL_FALSE, proj_matrix);
+        #proj_matrix = m3dPerspective(m3dDegToRad(50.0), float(self.width) / float(self.height), 0.1, 1000.0);
+
+        glUniformMatrix4fv(proj_location, 1, GL_FALSE, proj_matrix)
+        
+        if (many_cubes == True):
+        
+            for i in range(0, 24):
+                f = i + currentTime * 0.3;
+                
+                mv_matrix = (GLfloat * 16)(*identityMatrix)
+                
+                T = (GLfloat * 16)(*identityMatrix)
+                m3dTranslateMatrix44(T, 0, 0, -4)
+
+                W = (GLfloat * 16)(*identityMatrix)
+                m3dTranslateMatrix44(W, sin(2.1 * f) * 0.5, cos(1.7 * f) * 0.5, sin(1.3 * f) * cos(1.5 * f) * 2.0)
+
+                RX = (GLfloat * 16)(*identityMatrix)
+                m3dRotationMatrix44(RX, currentTime * m3dDegToRad(45.0), 0.0, 1.0, 0.0)
+
+                RY = (GLfloat * 16)(*identityMatrix)
+                m3dRotationMatrix44(RY, currentTime * m3dDegToRad(81.0), 1.0, 0.0, 0.0)
 
 
-        # supposed to render a spinny cube
-        f = currentTime * 0.3;
+                mv_matrix = m3dMultiply(W, m3dMultiply(T, m3dMultiply(RY, RX)))
+                
+                # or can multiply with numpy
+                #R = np.matmul(np.array(W).reshape(4,4) , np.matmul(np.array(RX).reshape(4,4), np.array(RY).reshape(4,4)))
+                #mv_matrix = np.matmul(R, np.array(T).reshape(4,4))
 
-        mv_matrix = (GLfloat * 16)(*identityMatrix)
-        
-        # next statements not exactly right
-        m3dTranslateMatrix44(mv_matrix, 0.0, 0.0, -4.0)
-        m3dTranslateMatrix44(mv_matrix, sin(2.1 * f) * 0.5, 
-                                        cos(1.7 * f) * 0.5, 
-                                        sin(1.3 * f) * cos(1.5 * f) * 2.0)
-        
-        m3dRotationMatrix44(mv_matrix, currentTime * m3dRadToDeg(45.0), 0.0, 1.0, 0.0)
-        m3dRotationMatrix44(mv_matrix, currentTime * m3dRadToDeg(81.0), 1.0, 0.0, 0.0)
-        
-        # supposed to be something like the following, though c++ code
-        # vmath::mat4 mv_matrix = vmath::translate(0.0f, 0.0f, -4.0f) *
-                                # vmath::translate(sinf(2.1f * f) * 0.5f,
-                                                    # cosf(1.7f * f) * 0.5f,
-                                                    # sinf(1.3f * f) * cosf(1.5f * f) * 2.0f) *
-                                # vmath::rotate((float)currentTime * 45.0f, 0.0f, 1.0f, 0.0f) *
-                                # vmath::rotate((float)currentTime * 81.0f, 1.0f, 0.0f, 0.0f);
-                                
+                glUniformMatrix4fv(mv_location, 1, GL_FALSE, mv_matrix)
+            
+                glDrawArrays(GL_TRIANGLES, 0, 36)
+                
+        else:
+            f = currentTime * 0.3;
 
-        glUniformMatrix4fv(mv_location, 1, GL_FALSE, mv_matrix)
-        
+            mv_matrix = (GLfloat * 16)(*identityMatrix)
+            
+            T = (GLfloat * 16)(*identityMatrix)
+            m3dTranslateMatrix44(T, 0, 0, -4)
 
-        glDrawArrays(GL_TRIANGLES, 0, 36)
-        # ///////////////////////////////////////
+            W = (GLfloat * 16)(*identityMatrix)
+            m3dTranslateMatrix44(W, sin(2.1 * f) * 0.5, cos(1.7 * f) * 0.5, sin(1.3 * f) * cos(1.5 * f) * 2.0)
+
+            RX = (GLfloat * 16)(*identityMatrix)
+            m3dRotationMatrix44(RX, currentTime * m3dDegToRad(45.0), 0.0, 1.0, 0.0)
+
+            RY = (GLfloat * 16)(*identityMatrix)
+            m3dRotationMatrix44(RY, currentTime * m3dDegToRad(81.0), 1.0, 0.0, 0.0)
+
+            mv_matrix = m3dMultiply(W, m3dMultiply(T, m3dMultiply(RY, RX)))
+            
+            # or can multiply with numpy
+            #R = np.matmul(np.array(W).reshape(4,4) , np.matmul(np.array(RX).reshape(4,4), np.array(RY).reshape(4,4)))
+            #mv_matrix = np.matmul(R, np.array(T).reshape(4,4))
+
+            glUniformMatrix4fv(mv_location, 1, GL_FALSE, mv_matrix)
         
+            glDrawArrays(GL_TRIANGLES, 0, 36)
+
         glutSwapBuffers()
 
     def reshape(self, width, height):
         global proj_matrix
-        aspect = float(width / height);
-        if proj_matrix == None:
-            #proj_matrix = gluPerspective(50.0, aspect, 0.1, 1000.0);
-            proj_matrix = m3dPerspective(50.0, aspect, 0.1, 1000.0);
-            
+        proj_matrix = m3dPerspective(m3dDegToRad(50.0), float(self.width) / float(self.height), 0.1, 1000.0);
+        
+        self.width = width
+        self.height = height
             
     def keyboard(self, key, x, y ):
         global fullscreen
-
+        global many_cubes
+        
         print ('key:' , key)
         if key == b'\x1b': # ESC
             sys.exit()
@@ -337,6 +412,13 @@ class Scene:
                 glutFullScreen()
                 fullscreen = True
 
+        elif key == b'm' or key == b'M': 
+
+            if (many_cubes == True):
+                many_cubes = False
+            else:
+                many_cubes = True
+                
         print('done')
 
     def init(self):
@@ -346,7 +428,8 @@ class Scene:
         
         glutPostRedisplay()
         glutTimerFunc( int(1/60), self.timer, 0)
-        time.sleep(1/20.0)
+        time.sleep(1/60.0)
+     
      
 if __name__ == '__main__':
     start = time.time()
@@ -354,19 +437,22 @@ if __name__ == '__main__':
     glutInit()
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
 
+    glutInitWindowSize(512, 512)
+
     w1 = glutCreateWindow('OpenGL SuperBible - Spinny Cube')
     glutInitWindowPosition(int((1360/2)-(512/2)), int((768/2)-(512/2)))
 
     fullscreen = False
+    many_cubes = False
     #glutFullScreen()
 
-    scene = Scene()
+    scene = Scene(512,512)
     glutReshapeFunc(scene.reshape)
     glutDisplayFunc(scene.display)
     glutKeyboardFunc(scene.keyboard)
 
-    #glutIdleFunc(scene.display)
-    glutTimerFunc( int(1/60), scene.timer, 0)
+    glutIdleFunc(scene.display)
+    #glutTimerFunc( int(1/60), scene.timer, 0)
     
     scene.init()
 
