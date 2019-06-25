@@ -466,29 +466,43 @@ class Scene:
 
         glUseProgram(render_prog);
 
-        T = translate(0.0, 0.0, -4.0).reshape(4,4)
-        RX = np.array(rotation_matrix( [1.0, 0.0, 0.0], currentTime * m3dDegToRad(17.0)))
-        RY = np.array(rotation_matrix( [0.0, 1.0, 0.0], currentTime * m3dDegToRad(13.0)))
-        #mv_matrix = np.matmul(np.matmul(RY, RX), T)
 
         T = (GLfloat * 16)(*identityMatrix)
-        m3dTranslateMatrix44(T, 0, 0, -4)
         RX = (GLfloat * 16)(*identityMatrix)
-        m3dRotationMatrix44(RX, currentTime * m3dDegToRad(17.0), 1.0, 0.0, 0.0)
         RY = (GLfloat * 16)(*identityMatrix)
-        m3dRotationMatrix44(RY, currentTime * m3dDegToRad(13.0), 0.0, 1.0, 0.0)
-        R = np.matmul(np.array(RX).reshape(4,4), np.array(RY).reshape(4,4))
-        #mv_matrix = np.matmul(R, np.array(T).reshape(4,4))
+        R = (GLfloat * 16)(*identityMatrix)
 
-        T = (GLfloat * 16)(*identityMatrix)
+
+        # way # 1 - works
+        # T = translate(0.0, 0.0, -4.0).reshape(4,4)
+        # RX = np.array(rotation_matrix( [1.0, 0.0, 0.0], currentTime * m3dDegToRad(17.0)))
+        # RY = np.array(rotation_matrix( [0.0, 1.0, 0.0], currentTime * m3dDegToRad(13.0)))
+        # mv_matrix = np.matmul(np.matmul(RY, RX), T)
+
+
+        # way # 2 - works !!
         m3dTranslateMatrix44(T, 0, 0, -4)
-        RX = (GLfloat * 16)(*identityMatrix)
         m3dRotationMatrix44(RX, currentTime * m3dDegToRad(17.0), 1.0, 0.0, 0.0)
-        RY = (GLfloat * 16)(*identityMatrix)
         m3dRotationMatrix44(RY, currentTime * m3dDegToRad(13.0), 0.0, 1.0, 0.0)
-        mv_matrix = m3dMultiply(T, m3dMultiply(RY, RX))     
 
-        #proj_matrix = (GLfloat * 16)(*identityMatrix)
+        # way # 2 - option A   works!
+        # Matrix multiplication is not commutative, order matters when multiplying matrices
+        R = m3dMultiply(RY, RX) 
+        mv_matrix = m3dMultiply(T, R)
+
+        # way # 2 - option B    works!
+        # T = np.matrix(T).reshape(4,4)
+        # mv_matrix = np.matmul(np.matmul(np.matrix(RY).reshape(4,4), np.matrix(RX).reshape(4,4)).reshape(4,4), T)
+
+
+        # way # 3 - works also
+        # T  = np.matrix(translate(0.0, 0.0, -4.0)).reshape(4,4)
+        # RX = np.matrix(rotation_matrix( [1.0, 0.0, 0.0], currentTime * m3dDegToRad(17.0)))
+        # RY = np.matrix(rotation_matrix( [0.0, 1.0, 0.0], currentTime * m3dDegToRad(13.0)))
+        # mv_matrix = RX * RY * T
+
+
+        proj_matrix = (GLfloat * 16)(*identityMatrix)
         proj_matrix = m3dPerspective(m3dDegToRad(60.0), float(self.width) / float(self.height), 0.1, 100.0);    
 
         glUniformMatrix4fv(uniforms_mv_matrix, 1, GL_FALSE, mv_matrix);
