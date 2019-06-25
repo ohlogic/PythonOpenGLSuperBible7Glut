@@ -151,8 +151,10 @@ def compile_program(vertex_source, fragment_source):
 
 class Scene:
 
-    def __init__(self):
-        pass
+    def __init__(self, width, height):
+    
+        self.width = width
+        self.height = height
 
     def display(self):
         green = [ 0.0, 0.25, 0.0, 1.0 ];
@@ -165,7 +167,8 @@ class Scene:
         glutSwapBuffers()
 
     def reshape(self, width, height):
-        pass
+        self.width = width
+        self.height = height
 
     def keyboard(self, key, x, y ):
         global fullscreen
@@ -201,13 +204,15 @@ if __name__ == '__main__':
     glutInit()
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
 
-    w1 = glutCreateWindow('OpenGL SuperBible - Spinny Cube')
+    glutInitWindowSize(512, 512)
+
+    w1 = glutCreateWindow('OpenGL SuperBible - Simple Texturing')
     glutInitWindowPosition(int((1360/2)-(512/2)), int((768/2)-(512/2)))
 
     fullscreen = False
     #glutFullScreen()
 
-    scene = Scene()
+    scene = Scene(512,512)
     glutReshapeFunc(scene.reshape)
     glutDisplayFunc(scene.display)
     glutKeyboardFunc(scene.keyboard)
