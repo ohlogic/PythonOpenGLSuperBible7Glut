@@ -22,6 +22,7 @@
 # DEALINGS IN THE SOFTWARE.
 
 
+
 import sys
 
 import time
@@ -90,15 +91,15 @@ def m3dRotationMatrix44(m, angle, x, y, z):
     s = sin(angle)
     c = cos(angle)
     mag = float((x * x + y * y + z * z) ** 0.5)
-    
+
     if mag == 0.0:
         m3dLoadIdentity(m)
         return
-    
+
     x /= mag
     y /= mag
     z /= mag
-    
+
     xx = x * x
     yy = y * y
     zz = z * z
@@ -109,22 +110,22 @@ def m3dRotationMatrix44(m, angle, x, y, z):
     ys = y * s
     zs = z * s
     one_c = 1.0 - c
-    
+
     m[0] = (one_c * xx) + c
     m[1] = (one_c * xy) - zs
     m[2] = (one_c * zx) + ys
     m[3] = 0.0
-    
+
     m[4] = (one_c * xy) + zs
     m[5] = (one_c * yy) + c
     m[6] = (one_c * yz) - xs
     m[7] = 0.0
-    
+
     m[8] = (one_c * zx) - ys
     m[9] = (one_c * yz) + xs
     m[10] = (one_c * zz) + c
     m[11]  = 0.0
-    
+
     m[12] = 0.0
     m[13] = 0.0
     m[14] = 0.0
@@ -138,6 +139,29 @@ def m3dMultiply(A, B):
                        A[2*4+j] * B[k*4+2] + A[3*4+j] * B[k*4+3]
     return C
 
+def translate(tx, ty, tz):
+    """creates the matrix equivalent of glTranslate"""
+    return np.array([1.0, 0.0, 0.0, 0.0, 
+                     0.0, 1.0, 0.0, 0.0, 
+                     0.0, 0.0, 1.0, 0.0, 
+tx, ty, tz, 1.0], np.float32)
+
+def rotation_matrix(axis, theta):
+    """
+    Return the rotation matrix associated with counterclockwise rotation about
+    the given axis by theta radians.
+    """
+    axis = np.asarray(axis)
+    axis = axis / math.sqrt(np.dot(axis, axis))
+    a = math.cos(theta / 2.0)
+    b, c, d = -axis * math.sin(theta / 2.0)
+    aa, bb, cc, dd = a * a, b * b, c * c, d * d
+    bc, ad, ac, ab, bd, cd = b * c, a * d, a * c, a * b, b * d, c * d
+    return np.array([[aa + bb - cc - dd, 2 * (bc + ad), 2 * (bd - ac), 0],
+                     [2 * (bc - ad), aa + cc - bb - dd, 2 * (cd + ab), 0],
+                     [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc, 0],
+[0,0,0,1]])
+
 identityMatrix = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]
 
 mv_location = (GLfloat * 16)(*identityMatrix)
@@ -149,17 +173,13 @@ many_cubes = False
 # Vertex program
 vs_source = '''
     #version 410 core                                                  
-
     in vec4 position;                                                  
-
     out VS_OUT                                                         
     {                                                                  
         vec4 color;                                                    
     } vs_out;                                                          
-
     uniform mat4 mv_matrix;                                            
     uniform mat4 proj_matrix;                                          
-
     void main(void)                                                    
     {                                                                  
         gl_Position = proj_matrix * mv_matrix * position;              
@@ -170,14 +190,11 @@ vs_source = '''
 # Fragment program
 fs_source = '''
     #version 410 core                                                  
-
     out vec4 color;                                                    
-
     in VS_OUT                                                          
     {                                                                  
         vec4 color;                                                    
     } fs_in;                                                           
-
     void main(void)                                                    
     {                                                                  
         color = fs_in.color;                                           
@@ -299,7 +316,7 @@ def compile_program(vertex_source, fragment_source):
 class Scene:
 
     def __init__(self, width, height):
-    
+
         self.width = width
         self.height = height
 
@@ -308,7 +325,7 @@ class Scene:
         global proj_location
         global proj_matrix
         global many_cubes
-        
+
         currentTime = time.time()
 
         green = [ 0.0, 0.25, 0.0, 1.0 ]
@@ -327,14 +344,14 @@ class Scene:
         #proj_matrix = m3dPerspective(m3dDegToRad(50.0), float(self.width) / float(self.height), 0.1, 1000.0);
 
         glUniformMatrix4fv(proj_location, 1, GL_FALSE, proj_matrix)
-        
+
         if (many_cubes == True):
-        
+
             for i in range(0, 24):
                 f = i + currentTime * 0.3;
-                
+
                 mv_matrix = (GLfloat * 16)(*identityMatrix)
-                
+
                 T = (GLfloat * 16)(*identityMatrix)
                 m3dTranslateMatrix44(T, 0, 0, -4)
 
@@ -349,20 +366,28 @@ class Scene:
 
 
                 mv_matrix = m3dMultiply(W, m3dMultiply(T, m3dMultiply(RY, RX)))
-                
+
                 # or can multiply with numpy
                 #R = np.matmul(np.array(W).reshape(4,4) , np.matmul(np.array(RX).reshape(4,4), np.array(RY).reshape(4,4)))
                 #mv_matrix = np.matmul(R, np.array(T).reshape(4,4))
 
+
+                # third way this could be done
+                # T  = np.matrix(translate(0.0, 0.0, -4.0)).reshape(4,4)
+                # W  = np.matrix(translate(sin(2.1 * f) * 0.5, cos(1.7 * f) * 0.5, sin(1.3 * f) * cos(1.5 * f) * 2.0)).reshape(4,4)
+                # RX = np.matrix(rotation_matrix( [1.0, 0.0, 0.0], currentTime * m3dDegToRad(17.0)))
+                # RY = np.matrix(rotation_matrix( [0.0, 1.0, 0.0], currentTime * m3dDegToRad(13.0)))
+                # mv_matrix = RX * RY * T * W
+
                 glUniformMatrix4fv(mv_location, 1, GL_FALSE, mv_matrix)
-            
+
                 glDrawArrays(GL_TRIANGLES, 0, 36)
-                
+
         else:
             f = currentTime * 0.3;
 
             mv_matrix = (GLfloat * 16)(*identityMatrix)
-            
+
             T = (GLfloat * 16)(*identityMatrix)
             m3dTranslateMatrix44(T, 0, 0, -4)
 
@@ -376,13 +401,22 @@ class Scene:
             m3dRotationMatrix44(RY, currentTime * m3dDegToRad(81.0), 1.0, 0.0, 0.0)
 
             mv_matrix = m3dMultiply(W, m3dMultiply(T, m3dMultiply(RY, RX)))
-            
-            # or can multiply with numpy
+
+            # second way to that can multiply with numpy
             #R = np.matmul(np.array(W).reshape(4,4) , np.matmul(np.array(RX).reshape(4,4), np.array(RY).reshape(4,4)))
             #mv_matrix = np.matmul(R, np.array(T).reshape(4,4))
 
+
+            # third way this could be done
+            # T  = np.matrix(translate(0.0, 0.0, -4.0)).reshape(4,4)
+            # W  = np.matrix(translate(sin(2.1 * f) * 0.5, cos(1.7 * f) * 0.5, sin(1.3 * f) * cos(1.5 * f) * 2.0)).reshape(4,4)
+            # RX = np.matrix(rotation_matrix( [1.0, 0.0, 0.0], currentTime * m3dDegToRad(17.0)))
+            # RY = np.matrix(rotation_matrix( [0.0, 1.0, 0.0], currentTime * m3dDegToRad(13.0)))
+            # mv_matrix = RX * RY * T * W
+
+
             glUniformMatrix4fv(mv_location, 1, GL_FALSE, mv_matrix)
-        
+
             glDrawArrays(GL_TRIANGLES, 0, 36)
 
         glutSwapBuffers()
@@ -390,14 +424,14 @@ class Scene:
     def reshape(self, width, height):
         global proj_matrix
         proj_matrix = m3dPerspective(m3dDegToRad(50.0), float(self.width) / float(self.height), 0.1, 1000.0);
-        
+
         self.width = width
         self.height = height
-            
+
     def keyboard(self, key, x, y ):
         global fullscreen
         global many_cubes
-        
+
         print ('key:' , key)
         if key == b'\x1b': # ESC
             sys.exit()
@@ -418,19 +452,19 @@ class Scene:
                 many_cubes = False
             else:
                 many_cubes = True
-                
+
         print('done')
 
     def init(self):
         pass
 
     def timer(self, blah):
-        
+
         glutPostRedisplay()
         glutTimerFunc( int(1/60), self.timer, 0)
         time.sleep(1/60.0)
-     
-     
+
+
 if __name__ == '__main__':
     start = time.time()
 
@@ -453,7 +487,7 @@ if __name__ == '__main__':
 
     glutIdleFunc(scene.display)
     #glutTimerFunc( int(1/60), scene.timer, 0)
-    
+
     scene.init()
 
     glutMainLoop()
