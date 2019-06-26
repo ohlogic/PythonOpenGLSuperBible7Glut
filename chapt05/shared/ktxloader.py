@@ -142,12 +142,15 @@ class KTXObject:
             if (data[12] == 1 and data[13] == 2 and data[14] == 3 and data[15] == 4):
                 print ('little endian')
             else:
-                print ('somethings wrong endian?')
+                print ('somethings wrong little endian?')
             
             # // No swap needed
             pass 
             
         elif (h.endianness == 0x01020304):
+        
+            # swap needed
+        
             pass
             #int.from_bytes(b'\xa3\x8eq\xb5', 'little')
             #np.frombuffer(b'\xa3\x8eq\xb5', dtype='<u')
@@ -202,15 +205,16 @@ class KTXObject:
         if (h.miplevels == 0):
             h.miplevels = 1;
         
-        if (target == GL_TEXTURE_2D):
+        if (target == GL_TEXTURE_1D):
+            glTexStorage1D(GL_TEXTURE_1D, h.miplevels, h.glinternalformat, h.pixelwidth);
+            glTexSubImage1D(GL_TEXTURE_1D, 0, 0, h.pixelwidth, h.glformat, h.glinternalformat, data);
+            
+        elif (target == GL_TEXTURE_2D):
             if (h.gltype == GL_NONE):
-                print ('it equals none')
+                glCompressedTexImage2D(GL_TEXTURE_2D, 0, h.glinternalformat, h.pixelwidth, h.pixelheight, 0, 420 * 380 / 2, data);
             else:
-                print ('we have a gltype FOUND!')
-                
                 glTexStorage2D(GL_TEXTURE_2D, h.miplevels, h.glinternalformat, h.pixelwidth, h.pixelheight)
                 
-                #p = data
                 height = h.pixelheight
                 width = h.pixelwidth
                 glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
@@ -226,7 +230,36 @@ class KTXObject:
                     if (width == 0):
                         width = 1
                         
-                    # what do I do here if more than one miplevels????, unfamiliar with the >>= operator
+        elif (target == GL_TEXTURE_3D):
+            glTexStorage3D(GL_TEXTURE_3D, h.miplevels, h.glinternalformat, h.pixelwidth, h.pixelheight, h.pixeldepth);
+            glTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 0, h.pixelwidth, h.pixelheight, h.pixeldepth, h.glformat, h.gltype, data);
+        
+        elif (target == GL_TEXTURE_1D_ARRAY):
+            glTexStorage2D(GL_TEXTURE_1D_ARRAY, h.miplevels, h.glinternalformat, h.pixelwidth, h.arrayelements);
+            glTexSubImage2D(GL_TEXTURE_1D_ARRAY, 0, 0, 0, h.pixelwidth, h.arrayelements, h.glformat, h.gltype, data);
+        
+        elif (target == GL_TEXTURE_2D_ARRAY):
+            glTexStorage3D(GL_TEXTURE_2D_ARRAY, h.miplevels, h.glinternalformat, h.pixelwidth, h.pixelheight, h.arrayelements);
+            glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0, h.pixelwidth, h.pixelheight, h.arrayelements, h.glformat, h.gltype, data);
+            
+        elif (target == GL_TEXTURE_CUBE_MAP):
+            glTexStorage2D(GL_TEXTURE_CUBE_MAP, h.miplevels, h.glinternalformat, h.pixelwidth, h.pixelheight);
+            #// glTexSubImage3D(GL_TEXTURE_CUBE_MAP, 0, 0, 0, 0, h.pixelwidth, h.pixelheight, h.faces, h.glformat, h.gltype, data);
+            
+            face_size = calculate_face_size(h);
+            for i in range(0, h.faces):
+                glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, 0, 0, h.pixelwidth, h.pixelheight, h.glformat, h.gltype, data + face_size * i);
+
+        elif (target == GL_TEXTURE_CUBE_MAP_ARRAY):
+            glTexStorage3D(GL_TEXTURE_CUBE_MAP_ARRAY, h.miplevels, h.glinternalformat, h.pixelwidth, h.pixelheight, h.arrayelements);
+            glTexSubImage3D(GL_TEXTURE_CUBE_MAP_ARRAY, 0, 0, 0, 0, h.pixelwidth, h.pixelheight, h.faces * h.arrayelements, h.glformat, h.gltype, data);
+
+
+        if (h.miplevels == 1):
+            glGenerateMipmap(target);
+
+    
+    
     #except:
     #    print("error reading file {}".format(filename))
 
