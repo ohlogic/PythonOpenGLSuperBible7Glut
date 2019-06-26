@@ -129,3 +129,9 @@ def translate(tx, ty, tz):
                      0.0, 1.0, 0.0, 0.0, 
                      0.0, 0.0, 1.0, 0.0, 
                         tx, ty, tz, 1.0], np.float32)
+
+# Scale matrix. Only 4x4 matrices supported
+def m3dScaleMatrix44(m, x, y, z):
+    m[0] *= x
+    m[5] *= y
+    m[10] *= z
