@@ -96,7 +96,6 @@ class KTXObject:
         data = numpy.fromfile(filename, dtype=np.byte)
         filesize = data.size
         
-        
         int_data = np.array(data[:12], dtype=np.ubyte)
         ptr = 12
         
@@ -207,10 +206,9 @@ class KTXObject:
             if (h.gltype == GL_NONE):
                 print ('it equals none')
             else:
-                print ('we have a gltype')
+                print ('we have a gltype FOUND!')
                 
                 glTexStorage2D(GL_TEXTURE_2D, h.miplevels, h.glinternalformat, h.pixelwidth, h.pixelheight)
-                
                 
                 #p = data
                 height = h.pixelheight
