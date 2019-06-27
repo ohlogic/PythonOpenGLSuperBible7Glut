@@ -192,15 +192,14 @@ class KTXObject:
             print ('something wrong with the ktx file, exiting')
             sys.exit()
         
-        #temp = tex;
+        
         if (tex == 0):
             tex = glGenTextures(1)
         
         glBindTexture(target, tex)
 
-        data_start = ptr + h.keypairbytes
-        
-        dt = data[data_start:]
+
+        ptr += h.keypairbytes
         
         if (h.miplevels == 0):
             h.miplevels = 1;
