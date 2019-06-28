@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-# dependency files for this example are found in the same github folder in dragon_support.zip
+# download dragon_support.zip for file dependencies
 
 import sys
 import time
@@ -219,7 +219,7 @@ class Scene:
         model_matrix = scale(6.0)
         
         view_matrix = (GLfloat * 16)(*identityMatrix)
-        view_matrix = m3dLookAt([math.cos(f * 0.35) * 120.0, math.cos(f * 0.4) * 30.0, math.sin(f * 0.35) * 120.0], 
+        view_matrix = m3dLookAt([math.cos(f * 0.35) * 120.0, math.cos(f * 0.4) * 30.0 , math.sin(f * 0.35) * 120.0 ], 
             [0.0, -20.0, 0.0], 
             [0.0, 1, 0.0])
         
