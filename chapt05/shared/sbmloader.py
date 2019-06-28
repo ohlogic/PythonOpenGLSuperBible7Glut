@@ -3,7 +3,6 @@
 import sys
 import time 
 import os
-import time
 import math
 import ctypes
 import numpy.matlib 
