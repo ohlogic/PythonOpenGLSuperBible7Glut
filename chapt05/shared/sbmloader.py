@@ -17,7 +17,8 @@ except:
     ERROR: PyOpenGL not installed properly.
         ''')
     sys.exit()
-    
+
+sub_object = []
 
 def SB6M_FOURCC(a,b,c,d):
     return ( (ord(a) << 0) | (ord(b) << 8) | (ord(c) << 16) | (ord(d) << 24) )
@@ -91,12 +92,15 @@ class SB6M_SUB_OBJECT_DECL:
 
 class SB6M_CHUNK_SUB_OBJECT_LIST(SB6M_CHUNK_HEADER):
     def __init__(self, data, offset):
+        global sub_object
+    
         super().__init__(data, offset)
         int_data = np.frombuffer(np.array(data[offset+8:offset+12], dtype=np.byte), dtype=np.uint32)
         self.count = int_data[0]
-        self.sub_object = []
+        #self.sub_object = []
         for i in range(self.count):
-            self.sub_object.append(SB6M_SUB_OBJECT_DECL(data, offset+12+i*8))
+
+            sub_object.append(SB6M_SUB_OBJECT_DECL(data, offset+12+i*8))
 
 class SB6M_CHUNK_HEADER_:
     chunk_type = 0
@@ -113,13 +117,7 @@ class SB6M_CHUNK_COMMENT:
     comment.append('')
     comment.append('')
     
-def get_sub_object_info(index, first, count):
-    if (index >= num_sub_objects):
-        first = 0
-        count = 0
-    else:
-        first = sub_object[index].first;
-        count = sub_object[index].count;
+
 
 def render(instance_count = 1, base_instance = 0):
     render_sub_object(0, instance_count, base_instance)
@@ -129,6 +127,20 @@ class SBMObject:
 
     def __init__(self):
         self.vao = GLuint(0)
+
+    def get_sub_object_count(self):
+        return len(sub_object)
+
+    def get_sub_object_info(self, index, first, count):
+        if (index >= len(sub_object)):
+            first = 0
+            count = 0
+        else:
+            first = sub_object[index].first;
+            count = sub_object[index].count;
+
+    def get_vao(self):
+        return self.vao
 
     def load(self, filename):
 
@@ -158,8 +170,13 @@ class SBMObject:
                 sub_object_chunk = SB6M_CHUNK_SUB_OBJECT_LIST(data, offset)
             elif chunk.type == SB6M_CHUNK_TYPE_DATA:
                 data_chunk = SB6M_DATA_CHUNK(data, offset) 
+            elif chunk.type == SB6M_CHUNK_TYPE_COMMENT:
+                print ('just comment')
             else:
-                raise
+                print ('am here')
+                pass 
+                #raise
+                
 
             offset += chunk.size
 
