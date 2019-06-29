@@ -1,5 +1,8 @@
 #!/usr/bin/python3
 
+# download the asteroids_support.zip for file dependencies
+
+
 import sys
 import time
 import ctypes
