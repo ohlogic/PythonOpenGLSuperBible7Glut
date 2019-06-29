@@ -131,13 +131,10 @@ class SBMObject:
     def get_sub_object_count(self):
         return len(sub_object)
 
-    def get_sub_object_info(self, index, first, count):
-        if (index >= len(sub_object)):
-            first = 0
-            count = 0
-        else:
-            first = sub_object[index].first;
-            count = sub_object[index].count;
+    def get_sub_object_info(self, index):
+       if (index >= len(sub_object)):
+           return 0, 0
+       return sub_object[index].first, sub_object[index].count
 
     def get_vao(self):
         return self.vao
