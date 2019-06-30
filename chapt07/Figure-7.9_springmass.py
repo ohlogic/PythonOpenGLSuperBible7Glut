@@ -215,7 +215,7 @@ class Scene:
             ar_velocities = np.empty([POINTS_TOTAL, 3], dtype='float32')
             for j, e in enumerate(initial_velocities):
                 ar_velocities[j] = e
-
+            
             glBufferData(GL_ARRAY_BUFFER, POINTS_TOTAL * glm.sizeof(glm.vec3()), ar_velocities, GL_DYNAMIC_COPY)
             glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, None)
             glEnableVertexAttribArray(1)
