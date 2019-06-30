@@ -19,6 +19,7 @@ except:
     sys.exit()
 
 sub_object = []
+index_type=GL_NONE
 
 def SB6M_FOURCC(a,b,c,d):
     return ( (ord(a) << 0) | (ord(b) << 8) | (ord(c) << 16) | (ord(d) << 24) )
@@ -45,10 +46,12 @@ class SB6M_CHUNK_HEADER:
 
 class SB6M_CHUNK_INDEX_DATA(SB6M_CHUNK_HEADER):
      def __init__(self, data, offset):
+        global index_type
         super().__init__(data, offset)
         int_data = np.frombuffer(np.array(data[offset+8:offset+20], dtype=np.byte), dtype=np.uint32)
         self.index_type, self.index_count, self.index_data_offset = int_data
-
+        index_type = self.index_type
+        
 class SB6M_CHUNK_VERTEX_DATA(SB6M_CHUNK_HEADER):
      def __init__(self, data, offset):
         super().__init__(data, offset)
@@ -119,15 +122,17 @@ class SB6M_CHUNK_COMMENT:
     
 
 
-def render(instance_count = 1, base_instance = 0):
-    render_sub_object(0, instance_count, base_instance)
+
 
 
 class SBMObject:
 
     def __init__(self):
         self.vao = GLuint(0)
-
+    
+    def render(self, instance_count = 1, base_instance = 0):
+        self.render_sub_object(0, instance_count, base_instance)
+    
     def get_sub_object_count(self):
         return len(sub_object)
 
@@ -196,14 +201,41 @@ class SBMObject:
             glBindVertexArray(self.vao)
 
             for attrib_i, attrib in enumerate(vertex_attrib_chunk.attrib_data):
-                if attrib.name=='position' or attrib.name=='map1': 
                     glVertexAttribPointer(attrib_i,
                         attrib.size, attrib.type,
                         GL_TRUE if (attrib.flags & SB6M_VERTEX_ATTRIB_FLAG_NORMALIZED) != 0 else GL_FALSE,
                         attrib.stride, ctypes.c_void_p(int(attrib.data_offset)))
                     glEnableVertexAttribArray(attrib_i)
 
-    def render(self):
 
+    def render_sub_object(self, object_index, instance_count, base_instance):
+        global index_type
+        
         glBindVertexArray(self.vao)
+        
         glDrawArrays(GL_TRIANGLES, 0, self.vertexcount)
+        
+        first, count = self.get_sub_object_info(self.get_sub_object_count())
+        
+        
+        if (index_type != GL_NONE):
+        
+            glDrawElementsInstancedBaseInstance(GL_TRIANGLES,
+                                                count,
+                                                index_type,
+                                                first,
+                                                instance_count,
+                                                base_instance)
+        
+        else:
+        
+            glDrawArraysInstancedBaseInstance(GL_TRIANGLES,
+                                               first,
+                                               count,
+                                               instance_count,
+                                               base_instance)
+              
+        
+        
+        
+        
