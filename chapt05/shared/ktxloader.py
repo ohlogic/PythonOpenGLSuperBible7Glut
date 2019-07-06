@@ -19,7 +19,6 @@ except:
         ''')
     sys.exit()
 
-
 class header:
     identifier=''    # [12]
     endianness=0     # unsigned int
@@ -192,7 +191,6 @@ class KTXObject:
             print ('something wrong with the ktx file, exiting')
             sys.exit()
         
-        
         if (tex == 0):
             tex = glGenTextures(1)
         
@@ -219,8 +217,19 @@ class KTXObject:
                 glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
                 
                 for i in range(0, h.miplevels):
-                    glTexSubImage2D(GL_TEXTURE_2D, i, 0, 0, width, height, h.glformat, h.gltype, data[ptr:]);
-                    ptr += height * calculate_stride(h, width, 1);
+
+                    if h.gltype == GL_FLOAT:
+
+                        float_data = np.frombuffer(data[ptr:], dtype=np.float32)
+                        glTexSubImage2D(GL_TEXTURE_2D, i, 0, 0, width, height, h.glformat, h.gltype, float_data)
+
+                    else: # h.type == GL_UNSIGNED_BYTE
+                        
+                        #a=numpy.array(data[ptr:], dtype=np.ubyte).astype(int)
+                        #ddd = (GLubyte * len(data[ptr:]))(*a)
+                        glTexSubImage2D(GL_TEXTURE_2D, i, 0, 0, width, height, h.glformat, h.gltype, data[ptr:])
+                        
+                    ptr += height * calculate_stride(h, width, 1)
                     
                     height >>= 1
                     width >>= 1
