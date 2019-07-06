@@ -190,7 +190,7 @@ class SBMObject:
         if vertex_data_chunk and vertex_attrib_chunk:
             start = vertex_data_chunk.data_offset
             end = start + vertex_data_chunk.data_size
-            vertex_data = np.frombuffer(np.array(data[start:end], dtype=np.byte), dtype=np.float)
+            vertex_data = np.frombuffer(np.array(data[start:end], dtype=np.byte), dtype=np.float32)
 
             data_buffer = glGenBuffers(1)
             glBindBuffer(GL_ARRAY_BUFFER, data_buffer)
@@ -210,28 +210,15 @@ class SBMObject:
 
     def render_sub_object(self, object_index, instance_count, base_instance):
         global index_type
-        
+
         glBindVertexArray(self.vao)
-        
-        glDrawArrays(GL_TRIANGLES, 0, self.vertexcount)
-        
-        first, count = self.get_sub_object_info(self.get_sub_object_count())
-        
-        
-        if (index_type != GL_NONE):
-        
-            glDrawElementsInstancedBaseInstance(GL_TRIANGLES,
-                                                count,
-                                                index_type,
-                                                first,
-                                                instance_count,
-                                                base_instance)
-        
+
+        if instance_count == 0:
+            glDrawArrays(GL_TRIANGLES, 0, self.vertexcount)
         else:
-        
             glDrawArraysInstancedBaseInstance(GL_TRIANGLES,
-                                               first,
-                                               count,
+                                               0,
+                                               self.vertexcount,
                                                instance_count,
                                                base_instance)
               
